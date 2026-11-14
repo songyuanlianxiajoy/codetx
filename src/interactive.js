@@ -224,7 +224,7 @@ export async function runInteractive(options) {
     messageCount: agent.history.length,
   });
 
-  async function waitForKey(predicate, timeoutMs = 120000) {
+  async function waitForKey(predicate, timeoutMs = 600000) {
     return new Promise((resolve) => {
       let done = false;
       let timer = null;

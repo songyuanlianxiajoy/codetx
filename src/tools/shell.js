@@ -10,6 +10,7 @@
  *   - 环境里关掉 git/pager 的交互，强制非交互。
  */
 import { spawn } from 'node:child_process';
+import path from 'node:path';
 import { ToolError, requireApproval, assertNotAborted } from './common.js';
 import { truncateMiddle, formatDuration, formatBytes } from '../util.js';
 
@@ -52,7 +53,7 @@ export function createShellTool(ctx) {
       assertNotAborted(ctx);
 
       const timeoutMs = clamp(Number(args.timeout_ms) || 120000, 1000, 600000);
-      const cwd = args.workdir ? String(args.workdir) : ctx.cwd;
+      const cwd = args.workdir ? path.resolve(ctx.cwd, String(args.workdir)) : ctx.cwd;
       const shell = ctx.shellPath;
 
       const started = Date.now();

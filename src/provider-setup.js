@@ -3,7 +3,7 @@
  * 供 codetx login / codetx relay 共用，保证两条路径写出来的配置一致。
  */
 import fs from 'node:fs';
-import { envPath, saveConfig, ensureHome } from './config.js';
+import { envPath, saveConfig, ensureHome, normalizeBaseUrl } from './config.js';
 import { atomicWrite } from './util.js';
 
 const HEADER = '# codetx 密钥文件（权限 600；.env 里的值优先于 shell 环境变量）';
@@ -60,12 +60,13 @@ export async function saveProvider(config, options) {
   } = options;
 
   if (!baseUrl) throw new Error('base_url 不能为空');
+  const normalizedBaseUrl = normalizeBaseUrl(String(baseUrl));
   if (!['openai', 'responses'].includes(type)) throw new Error(`type 只能是 openai 或 responses（收到 ${type}）`);
 
   config.providers = config.providers && typeof config.providers === 'object' ? config.providers : {};
   config.providers[name] = {
     type,
-    base_url: baseUrl,
+    base_url: normalizedBaseUrl,
     env_key: envKey,
     ...(model ? { model } : {}),
     ...(models.length > 0 ? { models } : {}),

@@ -11,13 +11,10 @@ import { VERSION } from './version.js';
 import { st } from './ansi.js';
 import {
   configPath,
-  envPath,
   sessionsDir,
   loadConfig,
   resolveConnection,
   maskKey,
-  ConfigError,
-  AuthError,
 } from './config.js';
 import { pingProvider, listModels } from './providers/index.js';
 import { which, resolveShell, tmpDir, platformLabel, isTermux, hasTermuxCommand } from './termux.js';
@@ -176,5 +173,3 @@ function diskFree() {
     return '未知';
   }
 }
-
-export { ConfigError, AuthError, envPath };

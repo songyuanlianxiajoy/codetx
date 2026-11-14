@@ -125,7 +125,7 @@ codetx login
 ```bash
 codetx relay use https://api.hnsec.cn/v1 sk-你的key deepseek-v4-flash
 # 多个模型（TUI 里 /model 可选）：
-codetx relay use https://api.example.com/v1 sk-xxx "gpt-5.6-sol,gpt-5.6-terra" --type responses
+codetx relay use https://api.example.com/v1 sk-xxx gpt-5.6-sol gpt-5.6-terra --type responses
 # 校验：
 codetx relay test
 codetx relay models
@@ -260,7 +260,7 @@ codetx resume --last
 codetx doctor            # 环境、配置、key、模型列表
 codetx doctor --probe    # 额外发一次真实请求验证连通性
 codetx doctor --offline  # 不访问网络
-codetx relay probe ...   # （无此命令时看下面）
+
 ```
 
 常见问题：
@@ -305,7 +305,7 @@ codetx/
 │   ├── session.js         # JSONL 会话
 │   ├── doctor.js / relay.js / login.js / completion.js
 │   └── termux.js          # 平台适配层
-├── tests/                 # node:test，112+ 用例（离线可跑）
+├── tests/                 # node:test，112 用例（离线可跑）
 ├── install.sh / uninstall.sh
 └── config.example.toml
 ```
@@ -314,8 +314,10 @@ codetx/
 
 ```bash
 cd ~/codetx
-npm test            # node --test（无需安装依赖）
-npm run check       # 对所有 JS 做语法检查
+npm test               # node --test（无需安装依赖）
+npm run check          # 对所有 JS 做语法检查
+python3 scripts/tui-smoke.py   # pty 起真实终端跑 TUI 冒烟（需 python3）
+python3 scripts/login-smoke.py # 登录向导冒烟（pty + mock 服务）
 ```
 
 测试覆盖：TOML、JSON 修复、diff、宽字符布局、键盘解析、Markdown 渲染、工具、配置、会话、
@@ -335,7 +337,7 @@ npm run check       # 对所有 JS 做语法检查
 ## 14. AI 开发声明
 
 本项目由 **AI（DeepSeek Harness 编码代理）** 在 Termux 环境中从零编写并完成测试，
-开发者：[@songyuanlianxiajoy](https://github.com/songyuanlianxiajoy)。代码经过 112+ 条自动化测试
+开发者：[@songyuanlianxiajoy](https://github.com/songyuanlianxiajoy)。代码经过 115 条自动化测试
 与真机联调，但仍**可能存在缺陷或未覆盖的边界情况**，请在生产使用前自行审查与验证；欢迎提 issue/PR。
 
 ## 15. 许可证

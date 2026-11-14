@@ -13,7 +13,7 @@ import path from 'node:path';
 import { homeDir, resolveConnection, saveConfig, maskKey, normalizeBaseUrl, readEnv, loadDotEnvSync } from './config.js';
 import { saveProvider, upsertEnv } from './provider-setup.js';
 import { listModels, pingProvider } from './providers/index.js';
-import { atomicWrite, timeStampName } from './util.js';
+import { atomicWrite } from './util.js';
 import { st } from './ansi.js';
 
 const DEFAULT_PROVIDER = 'relay';
@@ -82,7 +82,7 @@ async function relayUse(args, { config, write }) {
     else if (arg === '--env-key') envKey = args[++i] || DEFAULT_ENV_KEY;
     else if (!baseUrl) baseUrl = arg;
     else if (!apiKey) apiKey = arg;
-    else models.push(arg);
+    else models.push(...String(arg).split(',').map((m) => m.trim()).filter(Boolean));
   }
 
   if (!baseUrl || !apiKey) {
@@ -313,5 +313,3 @@ ${st.bold('codetx relay')} —— 中转站一键切换
 ${st.dim('例：codetx relay use https://api.hnsec.cn/v1 sk-xxx deepseek-v4-flash')}
 `);
 }
-
-export { timeStampName };
