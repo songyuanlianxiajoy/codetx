@@ -1,0 +1,7 @@
+node_modules/
+.codetx/
+*.log
+.DS_Store
+coverage/
+tmp/
+.pnpm-debug.log*

@@ -1,0 +1,41 @@
+{
+  "name": "codetx",
+  "version": "1.0.0",
+  "description": "codetx — Termux 原生的 Codex 风格 AI 编码终端（从零实现，零 npm 依赖）",
+  "type": "module",
+  "bin": {
+    "codetx": "bin/codetx.js"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "files": [
+    "bin",
+    "src",
+    "config.example.toml",
+    "install.sh",
+    "uninstall.sh",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test",
+    "check": "node scripts/check.mjs",
+    "start": "node bin/codetx.js"
+  },
+  "keywords": [
+    "termux",
+    "android",
+    "codex",
+    "ai",
+    "coding-agent",
+    "cli",
+    "aarch64"
+  ],
+  "author": "songyuanlianxiajoy",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/songyuanlianxiajoy/codetx.git"
+  }
+}

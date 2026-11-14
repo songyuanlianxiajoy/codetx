@@ -1,0 +1,61 @@
+# codetx 配置示例
+#
+# 复制到 ~/.codetx/config.toml 即可（install.sh 会自动做，已存在则不覆盖）。
+# 最快的配置方式其实是一条命令：
+#   codetx relay use https://api.example.com/v1 sk-xxx 模型名
+#
+# 也可以用环境变量（适合 CI / 容器）：
+#   CODETX_BASE_URL / CODETX_API_KEY / CODETX_MODEL / CODETX_TYPE=openai|responses
+
+# ===== 基本设置 =====
+# 默认模型（也可以在每个 provider 下单独写 model）
+model = ""
+# 默认 provider（需要在下面有同名 [providers.xxx] 段）
+provider = ""
+# 审批策略：
+#   ask       每条写文件/执行命令都询问（默认，最安全）
+#   auto      工作区内写文件自动放行；命令按风险分级
+#   full      全部放行（仍会硬拦截 rm -rf / 之类）
+#   read-only 只读，不允许写文件/执行命令
+approval_policy = "ask"
+
+# 单轮对话里最多调用模型多少次（防止死循环）
+max_turns = 40
+# 单轮对话里最多调用工具多少次
+max_tool_calls = 200
+# 是否显示模型思考过程（DeepSeek 的 reasoning_content 等）
+show_reasoning = false
+# 上下文窗口（token），用于自动压缩提示；按模型实际情况改
+context_window = 200000
+# 只允许写工作区内的文件（auto 模式下越界写仍会询问）
+workspace_only = true
+# 流式请求的整包超时 / 空闲超时（毫秒）
+request_timeout_ms = 300000
+stream_idle_timeout_ms = 180000
+# 请求里带 stream_options.include_usage（拿 token 统计；个别站点不支持会自动重试去掉）
+include_usage = true
+
+# ===== provider 示例 =====
+# 用中转站/官方 API/本地 ollama 都行，一个 [providers.名字] 是一个端点。
+#
+# [providers.relay]
+# # openai = /chat/completions，兼容绝大多数中转站与官方 OpenAI
+# # responses = /responses，新版 Codex 用的协议
+# type = "openai"
+# base_url = "https://api.example.com/v1"
+# # key 不写在这里，写进 ~/.codetx/.env（600）里的同名变量
+# env_key = "CODETX_RELAY_KEY"
+# # 这个 provider 的默认模型
+# model = "deepseek-v4-flash"
+# # 可选模型列表（TUI 里 /model 可直接选）
+# models = ["deepseek-v4-flash", "gpt-5.6-sol"]
+# context_window = 200000
+# # 额外请求头（可选）
+# # headers = { "x-title" = "codetx" }
+
+# 本地 ollama 例子（不需要 key 的话把 env_key 指向一个随便有值的变量）：
+# [providers.ollama]
+# type = "openai"
+# base_url = "http://127.0.0.1:11434/v1"
+# env_key = "OLLAMA_KEY"
+# model = "qwen2.5-coder:7b"
