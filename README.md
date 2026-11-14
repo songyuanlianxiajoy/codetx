@@ -199,13 +199,12 @@ TUI 里：
 | --- | --- |
 | `Enter` | 提交 |
 | `Ctrl+J` / `Alt+Enter` | 输入换行（多行指令） |
-| `↑` / `↓` | 命令历史 |
+| `↑` / `↓` | 命令历史（`/` 弹窗打开时用于选择命令） |
 | `Tab` | 补全 `/` 命令 |
 | `Ctrl+C` | 中断当前轮；输入框为空时连按两次退出 |
 | `Ctrl+D` | 退出 |
 | `Ctrl+O` | 滚动模式（对话区 ↑/↓/PgUp/PgDn 滚动，Esc/q 退出） |
 | `PgUp` / `PgDn` | 直接翻页（Shift+↑/↓ 逐行；也可用鼠标滚轮） |
-| `↑` / `↓` | 命令历史（`/` 弹窗打开时用于选择命令） |
 | `Ctrl+U` / `Ctrl+K` / `Ctrl+W` | 删到行首 / 行尾 / 删一个词 |
 | `Ctrl+L` | 重绘屏幕 |
 
@@ -326,7 +325,9 @@ codetx/
 ├── bin/codetx.js          # 入口（薄壳，错误格式化 + EPIPE 处理）
 ├── src/
 │   ├── main.js            # 参数解析与子命令分发
-│   ├── interactive.js     # TUI 主循环、斜杠命令、审批交互
+│   ├── interactive.js     # 入口分发：默认全屏 TUI，--no-alt-screen 走 inline
+│   ├── tui/               # 全屏 TUI：屏幕/布局/输入框/对话区/浮层
+│   ├── markdown.js        # Markdown 行渲染（两种 UI 共用）
 │   ├── exec.js            # 非交互模式
 │   ├── agent.js           # 模型<->工具主循环、压缩、防死循环
 │   ├── providers/         # chat/completions 与 responses 协议适配
