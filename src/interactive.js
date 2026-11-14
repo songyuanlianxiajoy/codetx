@@ -27,6 +27,7 @@ import { resolveConnection, saveConfig, historyPath, ensureHome } from './config
 import { buildSystemPrompt, loadProjectInstructions } from './instructions.js';
 import { formatDuration, formatTokens, truncateLine } from './util.js';
 import { copyToClipboard, which, resolveShell, TERMUX_API_HINT, platformLabel } from './termux.js';
+import { runTui } from './tui/app.js';
 
 const SLASH_COMMANDS = [
   '/help',
@@ -76,6 +77,13 @@ export class InputRouter {
     this.handlers.add(handler);
     return () => this.handlers.delete(handler);
   }
+
+  detach() {
+    if (!this.attached) return;
+    this.input.removeListener('data', this.bound);
+    this.attached = false;
+    this.handlers.clear();
+  }
 }
 
 export async function runInteractive(options) {
@@ -92,12 +100,17 @@ export async function runInteractive(options) {
   const output = process.stdout;
   const write = (text) => output.write(text);
   const isTTY = Boolean(input.isTTY && output.isTTY);
+  const useTui = options.altScreen !== false;
 
   if (!isTTY) {
     throw new Error('交互模式需要 TTY。当前不是终端环境，请用非交互模式：codetx exec "你的任务"');
   }
 
   await ensureHome();
+
+  if (useTui) {
+    return runTui(options);
+  }
 
   const wasRaw = input.isRaw;
   input.setRawMode(true);
@@ -666,6 +679,8 @@ export async function runInteractive(options) {
   } finally {
     spinner.stop();
     restoreTerminal();
+    router.detach();
+    input.pause();
     saveHistory(history);
     process.removeListener('SIGTERM', onSignal);
     process.removeListener('SIGHUP', onSignal);

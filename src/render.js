@@ -1,67 +1,22 @@
 /**
  * 终端渲染：流式 Markdown、工具调用/结果、审批提示、spinner。
  *
- * 为什么自己写 markdown 渲染：不引依赖，且要边收边渲染（手机上的长回答不能等全部结束）。
- * 渲染策略：按行处理（收到 \n 才定型），行内样式即时应用；未完成的半行用 \r 原地刷新，
- * 这样手机上也有一点点「打字机」的反馈。
+ * 这是「inline 模式」（--no-alt-screen）用的渲染器；全屏 TUI 在 src/tui/ 下，
+ * 两者共用 src/markdown.js 的 Markdown 行渲染。
  */
-import { st, stripAnsi, width, sanitize, truncate } from './ansi.js';
+import { st, width, sanitize, truncate } from './ansi.js';
+import { renderInline, formatMarkdownLine, createMarkdownState } from './markdown.js';
 
-const INLINE_RE = /(\*\*[^*]+\*\*|__[^_]+__|`[^`]+`|\[[^\]]+\]\([^)]+\)|\*[^*\n]+\*|_[^_\n]+_)/g;
+export { renderInline };
 
-export function renderInline(text, { color = st.enabled() } = {}) {
-  if (text === '' || text == null) return '';
-  if (!color) {
-    // 无色模式仍然把 markdown 标记去掉，保证纯文本可读
-    return String(text)
-      .replace(/\*\*([^*]+)\*\*/g, '$1')
-      .replace(/__([^_]+)__/g, '$1')
-      .replace(/`([^`]+)`/g, '$1')
-      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1')
-      .replace(/(^|[\s(])\*([^*\n]+)\*/g, '$1$2')
-      .replace(/(^|[\s(])_([^_\n]+)_/g, '$1$2');
-  }
-  const out = [];
-  let last = 0;
-  for (const match of String(text).matchAll(INLINE_RE)) {
-    out.push(escapeControl(text.slice(last, match.index)));
-    const token = match[0];
-    if (token.startsWith('**') || token.startsWith('__')) {
-      out.push(st.bold(token.slice(2, -2)));
-    } else if (token.startsWith('`')) {
-      out.push(st.style(token.slice(1, -1), ['cyan']));
-    } else if (token.startsWith('[')) {
-      const m = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(token);
-      if (m) {
-        const [, label, url] = m;
-        out.push(label === url ? st.underline(url) : `${st.underline(label)} ${st.dim(`(${url})`)}`);
-      } else {
-        out.push(token);
-      }
-    } else {
-      // 斜体
-      const inner = token.slice(1, -1);
-      out.push(st.italic(inner));
-    }
-    last = match.index + token.length;
-  }
-  out.push(escapeControl(text.slice(last)));
-  return out.join('');
-}
-
-function escapeControl(text) {
-  return String(text).replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, '');
-}
-
-/** 流式 Markdown 渲染器。 */
+/** 流式 Markdown 渲染器（inline 模式）。 */
 export class MarkdownRenderer {
   constructor({ out = (s) => process.stdout.write(s), color = true, cols } = {}) {
     this.out = out;
     this.color = color;
     this.cols = cols || (() => Math.max(20, Number(process.stdout.columns) || 80));
     this.buffer = '';
-    this.inFence = false;
-    this.fenceLang = '';
+    this.state = createMarkdownState();
     this.partialShown = false;
     this.active = false;
   }
@@ -88,13 +43,12 @@ export class MarkdownRenderer {
   renderPartial() {
     if (!this.buffer) return;
     const cols = this.terminalCols;
-    // 半行太长就先不显示，等换行后整体渲染，避免清行残留
     if (width(this.buffer) > cols - 2) {
       this.clearPartial();
       return;
     }
     if (this.partialShown) this.out('\r\x1b[2K');
-    const text = this.inFence ? this.buffer : renderInline(this.buffer, { color: this.color });
+    const text = this.state.inFence ? sanitize(this.buffer) : renderInline(this.buffer);
     this.out(sanitize(text));
     this.partialShown = true;
   }
@@ -107,54 +61,8 @@ export class MarkdownRenderer {
   }
 
   writeLine(line) {
-    const rendered = this.formatLine(line.replace(/\r$/, ''));
-    this.out(`${rendered}\n`);
-  }
-
-  formatLine(line) {
-    if (this.inFence) {
-      if (/^\s*```/.test(line)) {
-        this.inFence = false;
-        this.fenceLang = '';
-        return st.dim('  └');
-      }
-      return `  ${sanitize(line)}`;
-    }
-    const fence = /^\s*```\s*([\w+#-]*)\s*$/.exec(line);
-    if (fence) {
-      this.inFence = true;
-      this.fenceLang = fence[1] || '';
-      return st.dim(`  ┌${this.fenceLang ? ` ${this.fenceLang}` : ''}`);
-    }
-    if (line.trim() === '') return '';
-
-    // 标题
-    const heading = /^(#{1,6})\s+(.*)$/.exec(line);
-    if (heading) {
-      const level = heading[1].length;
-      const text = renderInline(heading[2], { color: this.color });
-      if (!this.color) return text;
-      return level <= 2 ? st.style(text, ['bold', 'cyan']) : st.bold(text);
-    }
-
-    // 分隔线
-    if (/^\s*([-*_])\1{2,}\s*$/.test(line)) return st.dim('─'.repeat(Math.min(this.terminalCols, 40)));
-
-    // 引用
-    const quote = /^\s*>\s?(.*)$/.exec(line);
-    if (quote) return `${st.dim('│')} ${st.dim(renderInline(quote[1], { color: this.color }))}`;
-
-    // 列表
-    const bullet = /^(\s*)[-*+]\s+(.*)$/.exec(line);
-    if (bullet) {
-      return `${bullet[1]}${st.cyan('•')} ${renderInline(bullet[2], { color: this.color })}`;
-    }
-    const ordered = /^(\s*)(\d+)[.)]\s+(.*)$/.exec(line);
-    if (ordered) {
-      return `${ordered[1]}${st.cyan(`${ordered[2]}.`)} ${renderInline(ordered[3], { color: this.color })}`;
-    }
-
-    return renderInline(line, { color: this.color });
+    const rendered = formatMarkdownLine(line, this.state, { cols: this.terminalCols });
+    this.out(`${rendered ? `  ${rendered}` : ''}\n`);
   }
 
   flush() {
@@ -164,21 +72,20 @@ export class MarkdownRenderer {
       this.buffer = '';
       this.writeLine(line);
     }
-    if (this.inFence) {
-      this.inFence = false;
+    if (this.state.inFence) {
+      this.state.inFence = false;
       this.out(`${st.dim('  └')}\n`);
     }
     this.active = false;
   }
 
-  /** 中断时调用：把已显示的内容收尾，不补换行。 */
   abort() {
     this.clearPartial();
     if (this.buffer) {
       this.out(`${st.dim(this.buffer)}`);
       this.buffer = '';
     }
-    this.inFence = false;
+    this.state.inFence = false;
   }
 }
 
@@ -288,7 +195,7 @@ export function formatToolResult(name, result, { maxLines = 8 } = {}) {
   return lines;
 }
 
-/** 审批提示块（只返回文本，真正的按键由 interactive 读取）。 */
+/** 审批提示块（只返回文本，真正的按键由 UI 读取）。 */
 export function formatApprovalPrompt(request) {
   const { kind, command, path, risk } = request;
   const lines = [];

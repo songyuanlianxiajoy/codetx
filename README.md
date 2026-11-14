@@ -6,20 +6,32 @@
 [English summary ↓](#english-summary)
 
 ```
-▌ codetx 1.0.0 · Termux 原生编码代理
-  deepseek-v4-flash · relay · openai · 审批 ask
-  /data/data/com.termux/files/home/my-project
-  /help 查看命令 · Ctrl+C 中断 · Ctrl+D 退出
+╭─ >_ codetx v1.1.0 ───────────────────────────────────────────────╮
+│ model      DeepSeek-V4-Flash  /model 切换                        │
+│ directory  /data/data/com.termux/files/home/my-project           │
+│ approval   ask  /approvals 切换                                  │
+│ session    2026-11-14-153012-a1b2c3                              │
+│                                                                  │
+│ 输入任务开始；/help 看全部命令。Enter 发送，Ctrl+J 换行，Ctrl+O 滚动。│
+╰──────────────────────────────────────────────────────────────────╯
 
 › 把 src/util.js 里的 parseDate 改成用 Intl 实现，并补测试
 
-⏺ read_file src/util.js
-  src/util.js（共 210 行，显示第 1-210 行）
-⏺ edit_file src/util.js
- 已更新 src/util.js（替换 1 处）
-⏺ shell npm test
-  ✓ 12 passing (1.2s)
-✓ 完成 · 6.4s · 3.1k tokens · 3 次工具调用
+• read_file src/util.js
+  └ src/util.js（共 210 行，显示第 1-210 行）
+• edit_file src/util.js
+  └ 已更新 src/util.js（替换 1 处）
+• shell npm test
+  └ ✓ 12 passing (1.2s)
+
+• 改好了。parseDate 现在用 Intl.DateTimeFormat 实现，测试已补。
+✓ 完成 · 6.4s · 3.1k tokens
+
+就绪 · 审批 ask                             DeepSeek-V4-Flash · ctx 12% · 3.1k tok
+╭──────────────────────────────────────────────────────────────────────────────────╮
+│ › 输入任务，Enter 发送；/ 查看命令                                               │
+╰──────────────────────────────────────────────────────────────────────────────────╯
+Enter 发送 · Ctrl+J 换行 · / 命令 · Ctrl+O 滚动 · Ctrl+C 清空/退出
 ```
 
 ---
@@ -44,7 +56,7 @@ codetx 是一个**从零重写**的编码代理命令行，交互习惯对齐 Co
 
 | 能力 | 说明 |
 | --- | --- |
-| 交互 TUI | inline 模式（输出留在滚动区，手机可长按复制），多行输入、历史、`/` 命令补全 |
+| 全屏 TUI | alt-screen + 差分刷新；Codex 风格欢迎框、消息/工具列表、带边框输入框、状态栏、审批弹窗、`/` 命令弹窗；`--no-alt-screen` 可退回 inline |
 | 工具 | `shell`、`read_file`、`write_file`、`edit_file`、`apply_patch`、`list_dir`、`glob`、`grep` |
 | 审批 | `ask` / `auto` / `full` / `read-only` 四档 + 危险命令硬拦截（`rm -rf /` 等） |
 | 会话 | 自动保存 JSONL；`codetx resume` / `/resume` 恢复；`/new` 开新会话；上下文超限自动压缩 |
@@ -176,8 +188,9 @@ CODETX_RELAY_KEY=sk-xxx
 
 ```bash
 cd ~/my-project
-codetx                                # 进入 TUI
+codetx                                # 进入全屏 TUI
 codetx "先跑测试，再把失败用例修好"     # 带初始任务进入 TUI
+codetx --no-alt-screen                 # inline 模式（保留终端滚动区，方便复制）
 ```
 
 TUI 里：
@@ -190,8 +203,11 @@ TUI 里：
 | `Tab` | 补全 `/` 命令 |
 | `Ctrl+C` | 中断当前轮；输入框为空时连按两次退出 |
 | `Ctrl+D` | 退出 |
+| `Ctrl+O` | 滚动模式（对话区 ↑/↓/PgUp/PgDn 滚动，Esc/q 退出） |
+| `PgUp` / `PgDn` | 直接翻页（Shift+↑/↓ 逐行；也可用鼠标滚轮） |
+| `↑` / `↓` | 命令历史（`/` 弹窗打开时用于选择命令） |
 | `Ctrl+U` / `Ctrl+K` / `Ctrl+W` | 删到行首 / 行尾 / 删一个词 |
-| `Ctrl+L` | 清屏 |
+| `Ctrl+L` | 重绘屏幕 |
 
 斜杠命令：
 
@@ -254,6 +270,21 @@ codetx resume --last
 单轮上下文超过 `context_window * 0.8` 时会自动机械压缩（保留最近消息 + 早期用户要求摘要），
 也可以 `/compact` 手动触发。压缩不额外请求模型，省钱省时。
 
+## 8.5 界面说明（Codex 风格 TUI）
+
+默认进入 alt-screen 全屏界面，结构从上到下：
+
+1. **欢迎框**：版本、模型、工作目录、审批策略、会话 ID、提示；
+2. **对话区**：用户消息 `›`、助手消息 `•`、工具调用与结果 `└`、思考过程（`/reasoning on` 打开）；
+3. **状态栏**：spinner/阶段、审批策略、模型、上下文占用、累计 tokens；
+4. **输入框**：带边框、多行（最多 6 行）、`/` 命令弹窗、`Tab` 补全；
+5. **快捷键提示**：随状态变化（运行中 / 审批中 / 滚动模式）。
+
+审批时会在中央弹出浮层：`↑/↓` 选择、`Enter` 确认，或直接按 `y`（允许一次）/ `a`（本会话总是允许）/ `n`（拒绝）。
+
+全屏模式会占用终端滚动区，长回答请用 `Ctrl+O` 滚动模式或 `--no-alt-screen`；
+退出（`/quit`、`Ctrl+D`、连按 `Ctrl+C`）会恢复终端并把会话留在 `~/.codetx/sessions`。
+
 ## 9. 诊断与排障
 
 ```bash
@@ -275,6 +306,8 @@ codetx doctor --offline  # 不访问网络
 | `/copy` 失败 | 需要 Termux:API 应用 + `pkg install termux-api`。 |
 | 中文输入错位 | 已在 `ansi.js` 按宽字符计算；若仍异常，反馈终端型号与宽度（`codetx doctor` 有列数）。 |
 | 命令里 PATH 不对 | 命令由 `bash -c` 在 Termux 环境执行，继承当前 `PATH`；`codetx config set shell /path/to/bash` 可换 shell。 |
+| 退出后终端卡住 / 光标不见 | 1.1.0 已修（退出时 pause stdin + 恢复终端 + 显式 exit）；若用旧版先 `reset`，或升级后 `--no-alt-screen` 验证。 |
+| 全屏里看不到之前的输出 | alt-screen 不保留滚动区：按 `Ctrl+O` 进入滚动模式，或 `codetx --no-alt-screen`。 |
 
 ## 10. Termux 适配笔记（为什么这样写）
 
@@ -305,7 +338,7 @@ codetx/
 │   ├── session.js         # JSONL 会话
 │   ├── doctor.js / relay.js / login.js / completion.js
 │   └── termux.js          # 平台适配层
-├── tests/                 # node:test，112 用例（离线可跑）
+├── tests/                 # node:test，125 用例（离线可跑）
 ├── install.sh / uninstall.sh
 └── config.example.toml
 ```
@@ -337,7 +370,7 @@ python3 scripts/login-smoke.py # 登录向导冒烟（pty + mock 服务）
 ## 14. AI 开发声明
 
 本项目由 **AI（DeepSeek Harness 编码代理）** 在 Termux 环境中从零编写并完成测试，
-开发者：[@songyuanlianxiajoy](https://github.com/songyuanlianxiajoy)。代码经过 115 条自动化测试
+开发者：[@songyuanlianxiajoy](https://github.com/songyuanlianxiajoy)。代码经过 125 条自动化测试
 与真机联调，但仍**可能存在缺陷或未覆盖的边界情况**，请在生产使用前自行审查与验证；欢迎提 issue/PR。
 
 ## 15. 许可证
@@ -352,7 +385,7 @@ MIT，见 [LICENSE](LICENSE)。
 
 **codetx** is a from-scratch, zero-dependency Codex-style coding agent CLI for Termux/Android (aarch64),
 written in pure ESM JavaScript. It does not contain or patch OpenAI Codex CLI code.
-It ships an inline TUI, approval modes, tool calling (shell/files/search/patch), JSONL sessions,
+It ships a full-screen alt-screen TUI (Codex-like banner, transcript, bordered composer, status bar, approval modal), approval modes, tool calling (shell/files/search/patch), JSONL sessions,
 `exec` for scripts, OpenAI `chat/completions` and `responses` support, a relay switcher, and a doctor.
 
 ```bash

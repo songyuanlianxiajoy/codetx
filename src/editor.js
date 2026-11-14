@@ -124,6 +124,12 @@ export class KeyParser {
     if (next === '\r') return { key: { type: 'newline' }, next: i + 2 };
     if (next === '\x7f' || next === '\x08') return { key: { type: 'word-delete-backward' }, next: i + 2 };
 
+    // ESC 后跟控制字符：是「Esc 键 + 控制键」，不要把控制键吞掉
+    const nextCode = buf.codePointAt(i + 1);
+    if (nextCode < 32 || nextCode === 0x7f) {
+      return { key: { type: 'escape' }, next: i + 1 };
+    }
+
     const altMap = {
       b: 'word-left',
       f: 'word-right',
@@ -139,14 +145,20 @@ export class KeyParser {
 }
 
 function parseCsi(params, finalChar) {
+  // SGR 鼠标：\e[<b;x;yM / m
+  if (params.startsWith('<')) {
+    const [code, x, y] = params.slice(1).split(';').map((v) => Number(v) || 0);
+    return { type: 'mouse', code, x, y, release: finalChar === 'm' };
+  }
   const parts = params === '' ? [] : params.split(';').map((p) => Number(p) || 0);
   const mod = parts.length > 1 ? parts[1] : 1;
   const alt = mod === 3 || mod === 4 || mod === 5 || mod === 7 || mod === 8;
+  const shift = mod === 2;
   switch (finalChar) {
     case 'A':
-      return { type: 'up' };
+      return { type: shift ? 'scroll-up' : 'up' };
     case 'B':
-      return { type: 'down' };
+      return { type: shift ? 'scroll-down' : 'down' };
     case 'C':
       return { type: alt ? 'word-right' : 'right' };
     case 'D':
@@ -167,6 +179,10 @@ function parseCsi(params, finalChar) {
         case 4:
         case 8:
           return { type: 'end' };
+        case 5:
+          return { type: 'pageup' };
+        case 6:
+          return { type: 'pagedown' };
         case 2:
           return { type: 'ignore' };
         default:

@@ -16,7 +16,18 @@ process.stderr.on('error', () => {});
 
 const argv = process.argv.slice(2);
 
-main(argv).catch((err) => {
+main(argv)
+  .then(() => {
+    const code = process.exitCode ?? 0;
+    // 确保 stdout 排空后再退出；stdin 在交互模式下可能仍被 resume 着
+    try {
+      process.stdout.write('', () => process.exit(code));
+    } catch {
+      process.exit(code);
+    }
+    setTimeout(() => process.exit(code), 500).unref();
+  })
+  .catch((err) => {
   if (process.env.CODETX_DEBUG) {
     console.error(err);
   } else {

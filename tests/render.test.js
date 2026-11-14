@@ -25,7 +25,7 @@ test('MarkdownRenderer：流式正文、列表、代码块', () => {
   const text = clean(out);
   assert.match(text, /标题/);
   assert.match(text, /• 第一项/);
-  assert.match(text, /┌ js/);
+  assert.match(text, /┌─ js/);
   assert.match(text, /const a = 1;/);
   assert.match(text, /└/);
   assert.match(text, /结束 加粗/);

@@ -74,6 +74,7 @@ const OPTION_SPECS = {
   '--help': { key: 'help', type: 'boolean', alias: '-h' },
   '--version': { key: 'version', type: 'boolean', alias: '-V' },
   '--no-color': { key: 'noColor', type: 'boolean' },
+  '--no-alt-screen': { key: 'noAltScreen', type: 'boolean' },
 };
 
 const ALIASES = new Map();
@@ -296,6 +297,7 @@ async function interactiveCommand({ options, positional, cwd }) {
     conn,
     initialPrompt: prompt,
     overrides: { ...options, approval: policy },
+    altScreen: options.noAltScreen !== true,
     sessionId: options.session || (options.continue ? await latestSessionId() : ''),
   });
 }
@@ -350,6 +352,7 @@ async function resumeCommand({ options, positional, cwd }) {
     config,
     conn,
     overrides: { ...options, approval: policy },
+    altScreen: options.noAltScreen !== true,
     sessionId: id,
   });
 }
@@ -502,7 +505,8 @@ function printHelp() {
   w(`  -o, --output-last-message <文件>  exec 把最终回答写到文件\n`);
   w(`  --continue, --last        继续最近会话\n`);
   w(`  --session <ID>            指定会话\n`);
-  w(`  --no-color                关闭颜色\n\n`);
+  w(`  --no-color                关闭颜色\n`);
+  w(`  --no-alt-screen           用 inline 模式（不用全屏 TUI）\n\n`);
   w(`${st.bold('示例')}\n`);
   w(`  ${st.cyan('codetx relay use https://api.example.com/v1 sk-xxx deepseek-v4-flash')}\n`);
   w(`  ${st.cyan('codetx')}                          ${st.dim('# 进入 TUI，/model 换模型')}\n`);
